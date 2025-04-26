@@ -8,7 +8,7 @@ const app = express();
 
 // ✅ CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000','https://dxs8368.uta.cloud/WDM_Team8','https://dxs8368.uta.cloud/'], // your frontend URL
+  origin: ['http://localhost:3001', 'http://localhost:3000','https://dxs8368.uta.cloud/'], // your frontend URL
   credentials: true               // if you're using cookies, sessions, or auth headers
 }));
 
