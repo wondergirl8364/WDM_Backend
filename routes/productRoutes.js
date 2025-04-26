@@ -196,7 +196,7 @@ router.get('/images/:productId', async (req, res) => {
       }
   
       const imageUrls = rows.map(row => 
-        `http://localhost:8081/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
+        `https://wdm-backend.onrender.com/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
       );
   
       res.status(200).json({ images: imageUrls });
