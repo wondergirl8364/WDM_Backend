@@ -11,7 +11,6 @@ app.use(cors({
   origin: ['http://localhost:3001', 'http://localhost:3000','https://dxs8368.uta.cloud'], // your frontend URL
   credentials: true               // if you're using cookies, sessions, or auth headers
 }));
-app.options('*', cors()); // allow preflight for all routes
 
 app.use(express.json());
 
@@ -24,6 +23,8 @@ const cartRoutes = require('./routes/cartRoutes');
 const favouriteRoutes = require('./routes/favouriteRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const shippingRoutes = require('./routes/shippingRoutes');
+const searchRoutes = require('./routes/searchRoutes');
+const recommendationRoutes = require('./routes/recommendationRoutes');
 
 app.use("/api/auth", authRoutes);
 app.use('/api/products', productRoutes);
@@ -33,6 +34,8 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/favourites', favouriteRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/shipping', shippingRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 
 // ✅ Fallback for unknown routes
 app.use((req, res, next) => {
