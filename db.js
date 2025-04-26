@@ -1,4 +1,4 @@
-const mysql = require('mysql2');
+const mysql = require("mysql2");
 require("dotenv").config();
 
 // Create MySQL connection
@@ -23,7 +23,7 @@ module.exports = db;
 
 // const db = mysql.createPool({
 //   host: 'localhost',
-//   user: 'root',
+//   use: 'root',
 //   password: 'root',
 //   database: 'shopper',
 //   port: '3306',
