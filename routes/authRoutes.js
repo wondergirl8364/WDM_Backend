@@ -13,15 +13,36 @@ require("dotenv").config();
 const { body, validationResult } = require("express-validator");
 
 const router = express.Router();
-
-// User Signup
 router.post(
   "/signup",
   [
-    body("firstName").notEmpty().withMessage("First name is required"),
-    body("lastName").notEmpty().withMessage("Last name is required"),
-    body("email").isEmail().withMessage("Valid email is required"),
-    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters long"),
+    body("firstName")
+      .trim()
+      .notEmpty()
+      .withMessage("First name is required"),
+    
+    body("lastName")
+      .trim()
+      .notEmpty()
+      .withMessage("Last name is required"),
+
+    body("email")
+      .trim()
+      .isEmail()
+      .withMessage("Valid email is required")
+      .normalizeEmail(),
+
+    body("password")
+      .isLength({ min: 8 })
+      .withMessage("Password must be at least 8 characters long")
+      .matches(/[a-z]/)
+      .withMessage("Password must contain at least one lowercase letter")
+      .matches(/[A-Z]/)
+      .withMessage("Password must contain at least one uppercase letter")
+      .matches(/\d/)
+      .withMessage("Password must contain at least one number")
+      .matches(/[@$!%*?&#]/)
+      .withMessage("Password must contain at least one special character (@$!%*?&#)"),
   ],
   async (req, res) => {
     // Validate input
@@ -31,7 +52,6 @@ router.post(
     }
 
     const { firstName, lastName, email, password, phone, address, role } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10); // Hash password
 
     try {
       // Check if email already exists
@@ -40,19 +60,31 @@ router.post(
         return res.status(400).json({ message: "Email already in use" });
       }
 
+      // Hash password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
       // Insert user into DB
       const result = await db.query(
         "INSERT INTO users (First_Name, Last_Name, Email, Password, Phone, Address, Role, Notification_Preference, Subscriber, Date_Joined) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, Now())",
-        [firstName, lastName, email, hashedPassword, phone || null, address || null, role || "Customer", JSON.stringify({
-          email: false,
-          sms: false,
-        }), false]
+        [
+          firstName,
+          lastName,
+          email,
+          hashedPassword,
+          phone || null,
+          address || null,
+          role || "Customer",
+          JSON.stringify({ email: false, sms: false }),
+          false
+        ]
       );
 
       // Generate JWT Token
-      const token = jwt.sign({ userId: result[0].insertId, email, role: role || "User" }, process.env.JWT_SECRET, {
-        expiresIn: "1h",
-      });
+      const token = jwt.sign(
+        { userId: result[0].insertId, email, role: role || "Customer" },
+        process.env.JWT_SECRET,
+        { expiresIn: "1h" }
+      );
 
       res.status(201).json({ message: "User registered successfully", token });
     } catch (error) {
@@ -61,7 +93,6 @@ router.post(
     }
   }
 );
-
 // User Login
 router.post(
   "/login",
