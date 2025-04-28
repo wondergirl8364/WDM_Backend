@@ -130,7 +130,7 @@ router.post("/forgot-password", async (req, res) => {
 
       const resetToken = jwt.sign({ userId: user.User_ID }, process.env.JWT_SECRET, { expiresIn: '30m' });
 
-      const resetLink = `http://localhost:3000/WDM_Team8/reset-password/${resetToken}`;
+      const resetLink = `https://wdm-backend.onrender.com/WDM_Team8/reset-password/${resetToken}`;
 
       console.log("Generated reset link:", resetLink);
 
@@ -407,6 +407,23 @@ router.post("/validate-promo", async (req, res) => {
   } catch (error) {
     console.error("Error validating promo code:", error);
     return res.status(500).json({ message: "Server error while validating promo code" });
+  }
+});
+
+router.post("/deactivate-promoCode", async (req, res) => {
+  try {
+    const {promocode} = req.body;
+
+    // Update name, phone, and notifications
+    await db.query(
+        "UPDATE promo_codes SET expired = ? WHERE Promo_Code = ?",
+        [true,promocode]
+      );
+
+    res.json({ message: "Promo Code Deactivated" });
+  } catch (error) {
+    console.error("Update error:", error);
+    res.status(500).json({ message: "Error updating account", error });
   }
 });
 

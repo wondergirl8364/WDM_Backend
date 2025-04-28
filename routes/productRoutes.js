@@ -1,57 +1,58 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
+const authenticateToken = require('../middleware/authMiddleware');
 
 // CREATE a product
 router.post('/', async (req, res) => {
-  const {
-    Name,
-    Description,
-    Price,
-    Stock_Quantity,
-    Rating,
-    Size,
-    Color,
-    AI_Tagging,
-    Category_ID,
-    Brand_ID,
-    Seller_ID
-  } = req.body;
-
-  console.log('📥 Incoming Product POST Request:', req.body);
-
-  const query = `
+    const {
+      Name,
+      Description,
+      Price,
+      Stock_Quantity,
+      Rating,
+      Size,
+      Color,
+      AI_Tagging,
+      Category_ID,
+      Brand_ID,
+      Seller_ID
+    } = req.body;
+  
+    console.log('📥 Incoming Product POST Request:', req.body);
+  
+    const query = `
       INSERT INTO products (
         Name, Description, Price, Stock_Quantity, Rating, Size, Color,
         AI_Tagging, Category_ID, Brand_ID, Seller_ID
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
-
-  const values = [
-    Name,
-    Description,
-    Price,
-    Stock_Quantity,
-    Rating,
-    Size,
-    Color,
-    JSON.stringify(AI_Tagging),
-    Category_ID,
-    Brand_ID,
-    Seller_ID
-  ];
-
-  try {
-    const [result] = await db.query(query, values);
-    console.log('✅ Insert Success:', result);
-    return res.status(201).json({ message: 'Product created', productId: result.insertId });
-  } catch (err) {
-    console.error('❌ DB Error:', err.message);
-    return res.status(500).json({ error: err.message });
-  }
-});
-
-
+  
+    const values = [
+      Name,
+      Description,
+      Price,
+      Stock_Quantity,
+      Rating,
+      Size,
+      Color,
+      JSON.stringify(AI_Tagging),
+      Category_ID,
+      Brand_ID,
+      Seller_ID
+    ];
+  
+    try {
+      const [result] = await db.query(query, values);
+      console.log('✅ Insert Success:', result);
+      return res.status(201).json({ message: 'Product created', productId: result.insertId });
+    } catch (err) {
+      console.error('❌ DB Error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+  });
+  
+  
 // READ all products
 router.get('/', (req, res) => {
   db.query('SELECT * FROM products', (err, results) => {
@@ -62,24 +63,24 @@ router.get('/', (req, res) => {
 
 // READ one product by Product_ID
 router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-
-  try {
-    const [rows] = await db.query(
-      'SELECT * FROM products WHERE Product_ID = ?',
-      [id]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'Product not found' });
+    const { id } = req.params;
+  
+    try {
+      const [rows] = await db.query(
+        'SELECT * FROM products WHERE Product_ID = ?',
+        [id]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'Product not found' });
+      }
+  
+      res.status(200).json(rows[0]);
+    } catch (err) {
+      console.error('❌ Error fetching product by ID:', err.message);
+      res.status(500).json({ error: err.message });
     }
-
-    res.status(200).json(rows[0]);
-  } catch (err) {
-    console.error('❌ Error fetching product by ID:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+  });
 
 
 // UPDATE a product
@@ -147,54 +148,48 @@ router.post('/upload-image', upload.single('image'), async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
+  
 
 // Get all image URLs for a product
 router.get('/images/:productId', async (req, res) => {
-  try {
-    const { productId } = req.params;
-
-    const [rows] = await db.query(
-      `SELECT Color FROM product_images WHERE Product_ID = ?`,
-      [productId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No images found for this product' });
+    try {
+      const { productId } = req.params;
+  
+      const [rows] = await db.query(
+        `SELECT Color FROM product_images WHERE Product_ID = ?`,
+        [productId]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'No images found for this product' });
+      }
+  
+      const imageUrls = rows.map(row => 
+        `https://wdm-backend.onrender.com/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
+      );
+  
+      res.status(200).json({ images: imageUrls });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
     }
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+  });
 
-    // const imageUrl = imageRows.length > 0
-    //   ? `${baseUrl}/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
-    //   : null;
-
-
-    const imageUrls = rows.map(row => 
-      `${baseUrl}/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
+  router.get('/image/:id', async (req, res) => {
+    const productId = req.params.id;
+    const color = req.query.color;
+  
+    const [rows] = await db.query(
+      `SELECT Image_Data, MIME_Type FROM product_images WHERE Product_ID = ? AND Color = ? LIMIT 1`,
+      [productId, color]
     );
-
-    res.status(200).json({ images: imageUrls });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-router.get('/image/:id', async (req, res) => {
-  const productId = req.params.id;
-  const color = req.query.color;
-
-  const [rows] = await db.query(
-    `SELECT Image_Data, MIME_Type FROM product_images WHERE Product_ID = ? AND Color = ? LIMIT 1`,
-    [productId, color]
-  );
-
-  if (rows.length === 0) return res.status(404).send('Image not found');
-
-  res.setHeader('Content-Type', rows[0].MIME_Type);
-  res.send(rows[0].Image_Data);
-});
-
+  
+    if (rows.length === 0) return res.status(404).send('Image not found');
+  
+    res.setHeader('Content-Type', rows[0].MIME_Type);
+    res.send(rows[0].Image_Data);
+  });
+  
 
 // DELETE a product
 router.delete('/:id', (req, res) => {
@@ -206,31 +201,31 @@ router.delete('/:id', (req, res) => {
 
 // GET all products by Category_ID
 router.get('/category/:categoryId', async (req, res) => {
-  const { categoryId } = req.params;
-
-  try {
-    const [rows] = await db.query(
-      `SELECT * FROM products WHERE Category_ID = ?`,
-      [categoryId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: 'No products found for this category' });
+    const { categoryId } = req.params;
+  
+    try {
+      const [rows] = await db.query(
+        `SELECT * FROM products WHERE Category_ID = ?`,
+        [categoryId]
+      );
+  
+      if (rows.length === 0) {
+        return res.status(404).json({ message: 'No products found for this category' });
+      }
+  
+      res.status(200).json(rows);
+    } catch (err) {
+      console.error('❌ Error fetching products by category:', err.message);
+      res.status(500).json({ error: err.message });
     }
-
-    res.status(200).json(rows);
-  } catch (err) {
-    console.error('❌ Error fetching products by category:', err.message);
-    res.status(500).json({ error: err.message });
-  }
-});
+  });
 
 
 
 
 
 
-// ✅ GET related products for a given product
+  // ✅ GET related products for a given product
 router.get('/:productId/related', async (req, res) => {
   const { productId } = req.params;
 
@@ -265,9 +260,8 @@ router.get('/:productId/related', async (req, res) => {
             [product.Product_ID]
           );
 
-          const baseUrl = `${req.protocol}://${req.get('host')}`;
           const imageUrl = imageRows.length > 0
-            ? `${baseUrl}/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
+            ? `https://wdm-backend.onrender.com/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
             : null;
 
           return {
@@ -320,9 +314,9 @@ router.get('/:productId/complementary', async (req, res) => {
 
     // 2. Define simple category mapping
     const complementaryMapping = {
-      1: [2, 3],
-      2: [1, 3],
-      3: [1, 2]
+      1: [2, 3], 
+      2: [1,3],
+      3: [1,2] 
     };
 
     const suggestedCategoryIds = complementaryMapping[Category_ID] || [];
@@ -336,7 +330,7 @@ router.get('/:productId/complementary', async (req, res) => {
       `SELECT Product_ID, Name, Price
        FROM products
        WHERE Category_ID IN (?) 
-       LIMIT 5`,
+       LIMIT 5`, 
       [suggestedCategoryIds]
     );
 
@@ -348,9 +342,9 @@ router.get('/:productId/complementary', async (req, res) => {
             `SELECT Color FROM product_images WHERE Product_ID = ? LIMIT 1`,
             [product.Product_ID]
           );
-          const baseUrl = `${req.protocol}://${req.get('host')}`;
+
           const imageUrl = imageRows.length > 0
-            ? `${baseUrl}/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
+            ? `https://wdm-backend.onrender.com/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
             : null;
 
           return {
@@ -373,23 +367,23 @@ router.get('/:productId/complementary', async (req, res) => {
   }
 });
 
-router.post('/:productId/reviews', async (req, res) => {
-  const { productId } = req.params;
-  const { userId, rating, reviewText } = req.body;
+// router.post('/:productId/reviews', async (req, res) => {
+//   const { productId } = req.params;
+//   const { userId, rating, reviewText } = req.body;
 
-  try {
-    const [result] = await db.query(
-      `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
-       VALUES (?, ?, ?, ?)`,
-      [productId, userId, rating, reviewText]
-    );
+//   try {
+//     const [result] = await db.query(
+//       `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
+//        VALUES (?, ?, ?, ?)`,
+//       [productId, userId, rating, reviewText]
+//     );
 
-    return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
-  } catch (err) {
-    console.error('❌ Error adding review:', err.message);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+//     return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
+//   } catch (err) {
+//     console.error('❌ Error adding review:', err.message);
+//     res.status(500).json({ error: 'Server error' });
+//   }
+// });
 
 router.get('/:productId/reviews', async (req, res) => {
   const { productId } = req.params;
@@ -411,6 +405,55 @@ router.get('/:productId/reviews', async (req, res) => {
   }
 });
 
+
+// Route to check if user can review
+router.get('/:productId/can-review', authenticateToken, async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId; 
+
+  try {
+      const [orders] = await db.query('SELECT Order_ID FROM orders WHERE User_ID = ?', [userId]);
+      const orderIds = orders.map(order => order.Order_ID);
+
+      if (orderIds.length === 0) {
+          return res.json({ canReview: false });
+      }
+
+      const [orderItems] = await db.query('SELECT Product_ID FROM order_items WHERE Order_ID IN (?)', [orderIds]);
+
+      const purchasedProductIds = orderItems.map(item => item.Product_ID);
+
+      if (purchasedProductIds.includes(parseInt(productId))) {
+          return res.json({ canReview: true });
+      } else {
+          return res.json({ canReview: false });
+      }
+  } catch (err) {
+      console.error('Error checking review eligibility:', err);
+      res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Route to submit a review
+router.post('/:productId/reviews', authenticateToken, async (req, res) => {
+  const { productId } = req.params;
+  const userId = req.user.userId;
+  const { rating, reviewText } = req.body;
+
+  console.log('HERE:',req.user)
+
+  try {
+      const [result] = await db.query(
+          'INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text, Created_At) VALUES (?, ?, ?, ?, NOW())',
+          [productId, userId, rating, reviewText]
+      );
+
+      res.json({ message: 'Review submitted successfully', Review_ID: result.insertId });
+  } catch (err) {
+      console.error('Error submitting review:', err);
+      res.status(500).json({ message: 'Server error' });
+  }
+});
 
 
 module.exports = router;
