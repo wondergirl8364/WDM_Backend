@@ -1,3 +1,8 @@
+/* Dhingra, Jayant – 1002105531
+Hakkinalu Somashekaraiah, Durgashree - 1002197918
+Singh, Dimple - 1002248368
+Shetty, Ananya Sri – 1002184482
+Tsavalam, Sashank - 1002234210 */
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
@@ -54,12 +59,22 @@ router.post('/', async (req, res) => {
   
   
 // READ all products
-router.get('/', (req, res) => {
-  db.query('SELECT * FROM products', (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
+// router.get('/', (req, res) => {
+//   db.query('SELECT * FROM products', (err, results) => {
+//     if (err) return res.status(500).json({ error: err.message });
+//     res.status(200).json(results);
+//   });
+// });
+
+router.get('/', async (req, res) => {
+  try {
+    const [results] = await db.query('SELECT * FROM products');
     res.status(200).json(results);
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
+
 
 // READ one product by Product_ID
 router.get('/:id', async (req, res) => {
@@ -367,23 +382,7 @@ router.get('/:productId/complementary', async (req, res) => {
   }
 });
 
-// router.post('/:productId/reviews', async (req, res) => {
-//   const { productId } = req.params;
-//   const { userId, rating, reviewText } = req.body;
 
-//   try {
-//     const [result] = await db.query(
-//       `INSERT INTO product_reviews (Product_ID, User_ID, Rating, Review_Text)
-//        VALUES (?, ?, ?, ?)`,
-//       [productId, userId, rating, reviewText]
-//     );
-
-//     return res.status(201).json({ message: 'Review added successfully', reviewId: result.insertId });
-//   } catch (err) {
-//     console.error('❌ Error adding review:', err.message);
-//     res.status(500).json({ error: 'Server error' });
-//   }
-// });
 
 router.get('/:productId/reviews', async (req, res) => {
   const { productId } = req.params;
