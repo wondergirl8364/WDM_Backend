@@ -43,7 +43,8 @@ router.post('/', async (req, res) => {
         Save_Info
       ]
     );
-    res.status(200).json({ message: 'Shipping info saved successfully' });
+    const [result] = await db.query('SELECT LAST_INSERT_ID() as Shipping_ID');
+    res.status(200).json({ message: 'Shipping info saved successfully', Shipping_ID: result[0].Shipping_ID });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -53,7 +54,7 @@ router.post('/', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT * FROM shipping_details WHERE User_ID = ? ORDER BY Created_At DESC LIMIT 1`,
+      `SELECT * FROM shipping_details WHERE User_ID = ? ORDER BY Shipping_ID DESC LIMIT 1`,
       [req.params.userId]
     );
     res.status(200).json(rows[0] || {});

@@ -107,9 +107,6 @@ INSERT INTO `messages` (`message_id`, `sender_id`, `receiver_id`, `message`, `ti
 CREATE TABLE `orders` (
   `Order_ID` int(11) NOT NULL,
   `User_ID` int(11) DEFAULT NULL,
-  `Product_ID` int(11) NOT NULL,
-  `Color` varchar(100) NOT NULL,
-  `Size` varchar(100) NOT NULL,
   `Order_Status` enum('Pending','Shipped','Delivered','Cancelled') DEFAULT NULL,
   `Total_Amount` decimal(10,2) DEFAULT NULL,
   `Order_Date` timestamp(6) NULL DEFAULT NULL,
@@ -139,6 +136,8 @@ CREATE TABLE `order_items` (
   `Order_ID` int(11) DEFAULT NULL,
   `Product_ID` int(11) DEFAULT NULL,
   `Quantity` int(11) NOT NULL,
+  `Size` varchar(100) DEFAULT NULL,
+  `Color` varchar(100) DEFAULT NULL,
   `Subtotal` decimal(10,2) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -195,10 +194,13 @@ INSERT INTO `products` (`Product_ID`, `Name`, `Description`, `Price`, `Stock_Qua
 --
 
 CREATE TABLE `product_images` (
+  `Image_ID` int(11) NOT NULL AUTO_INCREMENT,
   `Product_ID` int(11) NOT NULL,
   `Color` varchar(1000) NOT NULL,
   `Image_Data` longtext NOT NULL,
-  `MIME_Type` longtext NOT NULL
+  `MIME_Type` longtext NOT NULL,
+  PRIMARY KEY (`Image_ID`),
+  KEY `Product_ID_idx` (`Product_ID`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
@@ -258,15 +260,20 @@ INSERT INTO `sellers` (`Seller_ID`, `User_ID`, `Store_Name`, `Store_Description`
 CREATE TABLE `shipping_details` (
   `Shipping_ID` int(11) NOT NULL,
   `User_ID` int(11) DEFAULT NULL,
-  `Shipping_Address` text DEFAULT NULL,
+  `First_Name` varchar(100) DEFAULT NULL,
+  `Last_Name` varchar(100) DEFAULT NULL,
+  `Address_Line1` text DEFAULT NULL,
+  `Address_Line2` text DEFAULT NULL,
   `City` varchar(100) DEFAULT NULL,
   `State` varchar(100) DEFAULT NULL,
   `Country` varchar(100) DEFAULT NULL,
-  `Zip_Code` varchar(10) DEFAULT NULL,
+  `Zipcode` varchar(10) DEFAULT NULL,
+  `Optional_Notes` text DEFAULT NULL,
+  `Save_Info` tinyint(1) DEFAULT 0,
   `Tracking_Number` varchar(50) DEFAULT NULL,
   `Carrier` varchar(50) DEFAULT NULL,
   `Status` enum('Shipped','In Transit','Delivered','Returned') DEFAULT NULL,
-  `Order_ID` int(11) NOT NULL
+  `Created_At` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- --------------------------------------------------------
@@ -390,8 +397,7 @@ ALTER TABLE `products`
 --
 -- Indexes for table `product_images`
 --
-ALTER TABLE `product_images`
-  ADD PRIMARY KEY (`Product_ID`);
+-- product_images PRIMARY KEY is defined inline in CREATE TABLE above
 
 --
 -- Indexes for table `reviews`
@@ -414,8 +420,7 @@ ALTER TABLE `sellers`
 ALTER TABLE `shipping_details`
   ADD PRIMARY KEY (`Shipping_ID`),
   ADD UNIQUE KEY `Tracking_Number_UNIQUE` (`Tracking_Number`),
-  ADD KEY `User_ID` (`User_ID`),
-  ADD KEY `Order_ID` (`Order_ID`);
+  ADD KEY `User_ID` (`User_ID`);
 
 --
 -- Indexes for table `shopping_cart`
@@ -488,7 +493,7 @@ ALTER TABLE `products`
 -- AUTO_INCREMENT for table `product_images`
 --
 ALTER TABLE `product_images`
-  MODIFY `Product_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `Image_ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `reviews`
@@ -543,8 +548,7 @@ ALTER TABLE `categories`
 ALTER TABLE `orders`
   ADD CONSTRAINT `fk_orders_payment` FOREIGN KEY (`Payment_ID`) REFERENCES `payments` (`Payment_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT `fk_orders_shipping` FOREIGN KEY (`Shipping_ID`) REFERENCES `shipping_details` (`Shipping_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION,
-  ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`) ON DELETE CASCADE ON UPDATE NO ACTION,
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`Product_ID`) REFERENCES `products` (`Product_ID`);
+  ADD CONSTRAINT `fk_orders_user` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`) ON DELETE CASCADE ON UPDATE NO ACTION;
 
 --
 -- Constraints for table `order_items`
@@ -585,8 +589,7 @@ ALTER TABLE `sellers`
 -- Constraints for table `shipping_details`
 --
 ALTER TABLE `shipping_details`
-  ADD CONSTRAINT `shipping_details_ibfk_1` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`),
-  ADD CONSTRAINT `shipping_details_ibfk_2` FOREIGN KEY (`Order_ID`) REFERENCES `orders` (`Order_ID`);
+  ADD CONSTRAINT `shipping_details_ibfk_1` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`);
 
 --
 -- Constraints for table `shopping_cart`
@@ -594,6 +597,55 @@ ALTER TABLE `shipping_details`
 ALTER TABLE `shopping_cart`
   ADD CONSTRAINT `fk_shopping_product` FOREIGN KEY (`Product_ID`) REFERENCES `products` (`Product_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   ADD CONSTRAINT `fk_shopping_user` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`) ON DELETE NO ACTION ON UPDATE NO ACTION;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `favourites`
+--
+
+CREATE TABLE `favourites` (
+  `Favourite_ID` int(11) NOT NULL AUTO_INCREMENT,
+  `User_ID` int(11) NOT NULL,
+  `Product_ID` int(11) NOT NULL,
+  PRIMARY KEY (`Favourite_ID`),
+  UNIQUE KEY `unique_favourite` (`User_ID`, `Product_ID`),
+  KEY `Product_ID_idx` (`Product_ID`),
+  CONSTRAINT `fk_fav_user` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`) ON DELETE CASCADE,
+  CONSTRAINT `fk_fav_product` FOREIGN KEY (`Product_ID`) REFERENCES `products` (`Product_ID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `search_history`
+--
+
+CREATE TABLE `search_history` (
+  `Search_ID` int(11) NOT NULL AUTO_INCREMENT,
+  `User_ID` int(11) NOT NULL,
+  `Search_Query` varchar(255) NOT NULL,
+  `Search_Timestamp` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`Search_ID`),
+  KEY `User_ID_idx` (`User_ID`),
+  CONSTRAINT `fk_search_user` FOREIGN KEY (`User_ID`) REFERENCES `users` (`User_ID`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `promo_codes`
+--
+
+CREATE TABLE `promo_codes` (
+  `Promo_ID` int(11) NOT NULL AUTO_INCREMENT,
+  `Promo_Code` varchar(50) NOT NULL,
+  `Discount_Percentage` int(11) NOT NULL DEFAULT 10,
+  `Expired` tinyint(1) NOT NULL DEFAULT 0,
+  PRIMARY KEY (`Promo_ID`),
+  UNIQUE KEY `Promo_Code_UNIQUE` (`Promo_Code`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

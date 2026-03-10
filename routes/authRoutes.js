@@ -166,7 +166,8 @@ router.post("/forgot-password", async (req, res) => {
 
       const resetToken = jwt.sign({ userId: user.User_ID }, process.env.JWT_SECRET, { expiresIn: '30m' });
 
-      const resetLink = `https://dxs8368.uta.cloud/WDM_Team8/reset-password/${resetToken}`;
+      const frontendUrl = process.env.FRONTEND_URL || 'https://dxs8368.uta.cloud/WDM_Team8';
+      const resetLink = `${frontendUrl}/reset-password/${resetToken}`;
 
       console.log("Generated reset link:", resetLink);
 
