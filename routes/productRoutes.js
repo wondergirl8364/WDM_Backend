@@ -99,7 +99,7 @@ router.get('/:id', async (req, res) => {
 
 
 // UPDATE a product
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
   const {
     Name,
     Description,
@@ -121,25 +121,27 @@ router.put('/:id', (req, res) => {
     WHERE Product_ID = ?
   `;
 
-  const aiTaggingString = JSON.stringify(AI_Tagging); // 👈 again here too
+  const aiTaggingString = JSON.stringify(AI_Tagging);
 
-  db.query(query, [
-    Name,
-    Description,
-    Price,
-    Stock_Quantity,
-    Rating,
-    Size,
-    Color,
-    aiTaggingString,
-    Category_ID,
-    Brand_ID,
-    Seller_ID,
-    req.params.id
-  ], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+  try {
+    await db.query(query, [
+      Name,
+      Description,
+      Price,
+      Stock_Quantity,
+      Rating,
+      Size,
+      Color,
+      aiTaggingString,
+      Category_ID,
+      Brand_ID,
+      Seller_ID,
+      req.params.id
+    ]);
     res.status(200).json({ message: 'Product updated' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 //UPLOAD Image
@@ -179,8 +181,9 @@ router.get('/images/:productId', async (req, res) => {
         return res.status(404).json({ message: 'No images found for this product' });
       }
   
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
       const imageUrls = rows.map(row => 
-        `https://wdm-backend.onrender.com/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
+        `${baseUrl}/api/products/image/${productId}?color=${encodeURIComponent(row.Color)}`
       );
   
       res.status(200).json({ images: imageUrls });
@@ -191,27 +194,34 @@ router.get('/images/:productId', async (req, res) => {
   });
 
   router.get('/image/:id', async (req, res) => {
-    const productId = req.params.id;
-    const color = req.query.color;
-  
-    const [rows] = await db.query(
-      `SELECT Image_Data, MIME_Type FROM product_images WHERE Product_ID = ? AND Color = ? LIMIT 1`,
-      [productId, color]
-    );
-  
-    if (rows.length === 0) return res.status(404).send('Image not found');
-  
-    res.setHeader('Content-Type', rows[0].MIME_Type);
-    res.send(rows[0].Image_Data);
+    try {
+      const productId = req.params.id;
+      const color = req.query.color;
+    
+      const [rows] = await db.query(
+        `SELECT Image_Data, MIME_Type FROM product_images WHERE Product_ID = ? AND Color = ? LIMIT 1`,
+        [productId, color]
+      );
+    
+      if (rows.length === 0) return res.status(404).send('Image not found');
+    
+      res.setHeader('Content-Type', rows[0].MIME_Type);
+      res.send(rows[0].Image_Data);
+    } catch (err) {
+      console.error('Error fetching image:', err.message);
+      res.status(500).json({ error: 'Server error' });
+    }
   });
   
 
 // DELETE a product
-router.delete('/:id', (req, res) => {
-  db.query('DELETE FROM products WHERE Product_ID = ?', [req.params.id], (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
+router.delete('/:id', async (req, res) => {
+  try {
+    await db.query('DELETE FROM products WHERE Product_ID = ?', [req.params.id]);
     res.status(200).json({ message: 'Product deleted' });
-  });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // GET all products by Category_ID
@@ -275,8 +285,9 @@ router.get('/:productId/related', async (req, res) => {
             [product.Product_ID]
           );
 
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
           const imageUrl = imageRows.length > 0
-            ? `https://wdm-backend.onrender.com/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
+            ? `${baseUrl}/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
             : null;
 
           return {
@@ -358,8 +369,9 @@ router.get('/:productId/complementary', async (req, res) => {
             [product.Product_ID]
           );
 
+          const baseUrl = `${req.protocol}://${req.get('host')}`;
           const imageUrl = imageRows.length > 0
-            ? `https://wdm-backend.onrender.com/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
+            ? `${baseUrl}/api/products/image/${product.Product_ID}?color=${encodeURIComponent(imageRows[0].Color)}`
             : null;
 
           return {
