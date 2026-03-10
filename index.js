@@ -13,9 +13,11 @@ const socketIo = require('socket.io');
 const app = express();
 
 const server = http.createServer(app);
+const CORS_ORIGINS = (process.env.CORS_ORIGINS || 'http://localhost:3001,http://localhost:3000').split(',');
+
 const io = socketIo(server, {
   cors: {
-    origin: ['http://localhost:3001', 'http://localhost:3000','https://dxs8368.uta.cloud'], // Frontend origin
+    origin: CORS_ORIGINS,
     methods: ["GET", "POST"],
     credentials: true
   },
@@ -23,8 +25,8 @@ const io = socketIo(server, {
 });
 // ✅ CORS configuration
 app.use(cors({
-  origin: ['http://localhost:3001', 'http://localhost:3000','https://dxs8368.uta.cloud'], // your frontend URL
-  credentials: true               // if you're using cookies, sessions, or auth headers
+  origin: CORS_ORIGINS,
+  credentials: true
 }));
 
 // app.use(cors());
