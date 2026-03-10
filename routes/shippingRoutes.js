@@ -25,7 +25,7 @@ router.post('/', async (req, res) => {
   } = req.body;
 
   try {
-    await db.query(
+    const [result] = await db.query(
       `INSERT INTO shipping_details 
         (User_ID, First_Name, Last_Name, Address_Line1, Address_Line2, City, Country, State, Zipcode, Optional_Notes, Save_Info)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -43,8 +43,7 @@ router.post('/', async (req, res) => {
         Save_Info
       ]
     );
-    const [result] = await db.query('SELECT LAST_INSERT_ID() as Shipping_ID');
-    res.status(200).json({ message: 'Shipping info saved successfully', Shipping_ID: result[0].Shipping_ID });
+    res.status(200).json({ message: 'Shipping info saved successfully', Shipping_ID: result.insertId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
